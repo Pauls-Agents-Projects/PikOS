@@ -6,7 +6,7 @@ clients verify provider identities instead of accepting arbitrary certificates.
 
 - CA source: Espressif `esp-idf/components/mbedtls/esp_crt_bundle/cacrt_all.pem`
 - Bundle generator: Arduino-ESP32 2.0.17 `tools/gen_crt_bundle.py`
-- Generated: 2026-09-15
+- Generated: 2026-09-18
 - Certificates: 122
 
 The additional certificate is GlobalSign Root R1, downloaded from GlobalSign

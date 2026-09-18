@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.22.0-rc6 — 2026-09-15
+## 0.22.0-rc6 — 2026-09-18
 
 First public release candidate of PikOS.
 
