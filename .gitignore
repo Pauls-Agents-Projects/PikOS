@@ -1,0 +1,11 @@
+.pio/
+.vscode/
+.DS_Store
+*.bin
+!data/cert/x509_crt_bundle.bin
+*.elf
+*.map
+/backups/
+/dist/
+*.d
+__pycache__/

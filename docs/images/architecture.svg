@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="590" viewBox="0 0 1120 590" role="img" aria-labelledby="title desc">
+  <title id="title">PikOS local-first architecture</title>
+  <desc id="desc">A browser and physical controls talk to a local ESP32 display engine. A bounded sync worker retrieves Internet data over authenticated HTTPS and stores compact app snapshots.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#090b10"/><stop offset="1" stop-color="#171b24"/></linearGradient>
+    <linearGradient id="rgb" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#ff453a"/><stop offset=".48" stop-color="#30d158"/><stop offset="1" stop-color="#0a84ff"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity=".32"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0l10 5-10 5z" fill="#8e8e93"/></marker>
+    <style>.h{font:700 24px system-ui,sans-serif;fill:#f5f5f7}.t{font:600 17px system-ui,sans-serif;fill:#f5f5f7}.s{font:400 14px system-ui,sans-serif;fill:#a1a1a6}.box{fill:#1d1f27;stroke:#ffffff20;stroke-width:1.5}.line{fill:none;stroke:#8e8e93;stroke-width:2;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect width="1120" height="590" rx="28" fill="url(#bg)"/>
+  <text x="54" y="58" class="h">PikOS · local-first by design</text>
+  <rect x="435" y="104" width="250" height="118" rx="24" class="box" filter="url(#shadow)"/>
+  <rect x="435" y="104" width="250" height="5" rx="3" fill="url(#rgb)"/>
+  <text x="560" y="148" text-anchor="middle" class="t">ESP32 display engine</text>
+  <text x="560" y="177" text-anchor="middle" class="s">64 fps render task</text>
+  <text x="560" y="199" text-anchor="middle" class="s">buttons · sensors · buzzer</text>
+
+  <rect x="54" y="113" width="250" height="98" rx="22" class="box"/>
+  <text x="179" y="153" text-anchor="middle" class="t">Settings browser</text>
+  <text x="179" y="181" text-anchor="middle" class="s">semantic twin · notifications</text>
+  <path d="M304 162H423" class="line"/>
+
+  <rect x="816" y="113" width="250" height="98" rx="22" class="box"/>
+  <text x="941" y="153" text-anchor="middle" class="t">32×8 RGB matrix</text>
+  <text x="941" y="181" text-anchor="middle" class="s">256 physical LEDs</text>
+  <path d="M685 162h119" class="line"/>
+
+  <rect x="435" y="291" width="250" height="108" rx="22" class="box"/>
+  <text x="560" y="331" text-anchor="middle" class="t">Timestamped app store</text>
+  <text x="560" y="359" text-anchor="middle" class="s">bounded snapshots · charts</text>
+  <text x="560" y="381" text-anchor="middle" class="s">local time-derived updates</text>
+  <path d="M560 234v45" class="line"/>
+
+  <rect x="54" y="296" width="250" height="98" rx="22" class="box"/>
+  <text x="179" y="336" text-anchor="middle" class="t">Crash journal</text>
+  <text x="179" y="364" text-anchor="middle" class="s">4 retained reset breadcrumbs</text>
+  <path d="M423 345H316" class="line"/>
+
+  <rect x="816" y="291" width="250" height="108" rx="22" class="box"/>
+  <text x="941" y="331" text-anchor="middle" class="t">Bounded Sync worker</text>
+  <text x="941" y="359" text-anchor="middle" class="s">one provider at a time</text>
+  <text x="941" y="381" text-anchor="middle" class="s">private TLS memory arena</text>
+  <path d="M804 345H697" class="line"/>
+
+  <rect x="816" y="474" width="250" height="70" rx="20" class="box"/>
+  <text x="941" y="504" text-anchor="middle" class="t">Internet providers</text>
+  <text x="941" y="529" text-anchor="middle" class="s">verified HTTPS identities</text>
+  <path d="M941 462v-51" class="line" transform="rotate(180 941 436.5)"/>
+
+  <rect x="435" y="474" width="250" height="70" rx="20" class="box"/>
+  <text x="560" y="504" text-anchor="middle" class="t">Credential vault</text>
+  <text x="560" y="529" text-anchor="middle" class="s">redacted from browser reads</text>
+  <path d="M560 411v51" class="line"/>
+</svg>

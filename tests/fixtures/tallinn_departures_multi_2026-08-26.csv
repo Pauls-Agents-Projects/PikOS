@@ -1,0 +1,7 @@
+Transport,RouteNum,ExpectedTimeInSeconds,ScheduleTimeInSeconds,44147,version20201024
+stop,1234
+tram,T5,44446,44406,Kopli,299,Z
+tram,T2,44612,44592,Kopli,465,
+stop,1235
+tram,T1,44275,44271,Kadriorg,128,
+tram,T2,44699,44691,Lennujaam,552,

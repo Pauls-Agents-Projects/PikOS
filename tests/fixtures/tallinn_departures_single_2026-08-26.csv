@@ -1,0 +1,4 @@
+Transport,RouteNum,ExpectedTimeInSeconds,ScheduleTimeInSeconds,44131,version20201024
+stop,1234
+tram,T5,44426,44406,Kopli,295,Z
+tram,T2,44602,44592,Kopli,471,
