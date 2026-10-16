@@ -41,6 +41,8 @@ class PixelFontHeadlineGlyphTests(unittest.TestCase):
             "0x00c9",
             "0x00e9",
             "0x27e9",
+            "'['",
+            "']'",
         ):
             with self.subTest(case_label=case_label):
                 self.glyph(case_label)

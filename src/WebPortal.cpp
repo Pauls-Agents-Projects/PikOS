@@ -345,6 +345,7 @@ void WebPortal::handleResources() {
   document["sync_cycles_completed"] = sync.cyclesCompleted;
   document["sync_cycles_aborted"] = sync.cyclesAborted;
   document["sync_failure_count"] = sync.providerFailures;
+  document["sync_quarantined_mask"] = sync.quarantinedProviderMask;
   document["sync_last_duration_ms"] = sync.lastSyncDurationMs;
   document["sync_average_duration_ms"] = sync.averageSyncDurationMs;
   document["sync_current_duration_ms"] = sync.currentSyncElapsedMs;
@@ -455,6 +456,7 @@ void WebPortal::handleContent() {
   JsonArray items = document.createNestedArray("items");
   String error;
   size_t count = 0;
+  const OnlineStatus online = dataServices_.statusSnapshot();
 
   if (app == "rss" || app == "reddit") {
     Headline headline;
@@ -476,8 +478,14 @@ void WebPortal::handleContent() {
         item["title"] = headline.title;
         item["icon_id"] = headline.iconId;
         item["id"] = headline.id;
+        item["timestamp"] = headline.publishedAt != 0
+                                ? headline.publishedAt
+                                : (app == "rss" ? online.rssUpdatedAt
+                                                : online.redditUpdatedAt);
       }
     }
+    document["updated_at"] =
+        app == "rss" ? online.rssUpdatedAt : online.redditUpdatedAt;
   } else if (app == "calendar") {
     CalendarEvent event;
     if (dataServices_.calendarAt(0, event, count, error)) {
@@ -491,8 +499,10 @@ void WebPortal::handleContent() {
         item["ends_at"] = event.endsAt;
         item["all_day"] = event.allDay;
         item["icon_id"] = event.iconId;
+        item["timestamp"] = event.startsAt;
       }
     }
+    document["updated_at"] = online.calendarUpdatedAt;
   } else if (app == "travel") {
     TravelStopSnapshot stop;
     bool itemStale = true;
@@ -509,6 +519,7 @@ void WebPortal::handleContent() {
         item["line"] = stop.line;
         item["icon_id"] = stop.iconId;
         item["fetched_at"] = stop.fetchedAt;
+        item["timestamp"] = stop.fetchedAt;
         item["stale"] = itemStale;
         item["error"] = stop.error;
         JsonArray departures = item.createNestedArray("departures");
@@ -533,9 +544,8 @@ void WebPortal::handleContent() {
         }
       }
     }
-    const OnlineStatus status = dataServices_.statusSnapshot();
-    document["updated_at"] = status.travelUpdatedAt;
-    document["stale"] = status.travelStale;
+    document["updated_at"] = online.travelUpdatedAt;
+    document["stale"] = online.travelStale;
   } else if (app == "market") {
     MarketQuote quote;
     if (dataServices_.marketAt(0, quote, count, error)) {
@@ -615,6 +625,9 @@ void WebPortal::handleContent() {
       item["stale"] = activity.stale;
       item["reconnect_required"] = activity.reconnectRequired;
       item["updated_at"] = activity.updatedAt;
+      item["timestamp"] = activity.latestStartedAt != 0
+                                ? activity.latestStartedAt
+                                : activity.updatedAt;
       item["steps_today"] = activity.stepsToday;
       item["distance_today_m"] = activity.distanceTodayM;
       item["latest_started_at"] = activity.latestStartedAt;
@@ -628,6 +641,7 @@ void WebPortal::handleContent() {
       error = activity.error;
     }
     count = items.size();
+    document["updated_at"] = online.activityUpdatedAt;
   } else {
     jsonDocument_.clear();
     document["ok"] = false;
@@ -938,6 +952,18 @@ void WebPortal::handleStatus() {
     item["sync_provider"] = crash.provider;
     item["uptime_ms"] = crash.uptimeMs;
     item["sequence"] = crash.sequence;
+  }
+  const SyncTelemetry sync = dataServices_.syncTelemetry();
+  document["sync_quarantined_mask"] = sync.quarantinedProviderMask;
+  JsonArray quarantinedProviders =
+      document.createNestedArray("sync_quarantined_providers");
+  for (uint8_t raw = static_cast<uint8_t>(OnlineProvider::Rss);
+       raw <= static_cast<uint8_t>(OnlineProvider::Activity); ++raw) {
+    const auto provider = static_cast<OnlineProvider>(raw);
+    const uint8_t bit = static_cast<uint8_t>(1U << (raw - 1));
+    if ((sync.quarantinedProviderMask & bit) != 0) {
+      quarantinedProviders.add(providerName(provider));
+    }
   }
   document["name"] = config.deviceName;
   document["ip"] = network_.ipAddress();

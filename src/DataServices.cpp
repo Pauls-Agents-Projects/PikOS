@@ -33,6 +33,7 @@ constexpr uint8_t kForceReddit = 1U << 5;
 constexpr uint8_t kForceTravel = 1U << 6;
 constexpr uint8_t kForceActivity = 1U << 7;
 constexpr uint32_t kProviderServiceGapMs = 1800;
+constexpr uint8_t kProviderFailureQuarantineThreshold = 3;
 constexpr uint32_t kDerivedCheckIntervalMs = 1000;
 constexpr size_t kMaximumCalendarEvents = 20;
 constexpr size_t kMaximumCalendarCandidatesPerFeed = 40;
@@ -97,6 +98,21 @@ uint8_t providerBit(OnlineProvider provider) {
       return 0;
   }
   return 0;
+}
+
+const char* providerLabel(OnlineProvider provider) {
+  switch (provider) {
+    case OnlineProvider::Rss: return "rss";
+    case OnlineProvider::Netatmo: return "netatmo";
+    case OnlineProvider::Market: return "market";
+    case OnlineProvider::Energy: return "energy";
+    case OnlineProvider::Calendar: return "calendar";
+    case OnlineProvider::Travel: return "travel";
+    case OnlineProvider::Reddit: return "reddit";
+    case OnlineProvider::Activity: return "activity";
+    case OnlineProvider::None: return "none";
+  }
+  return "none";
 }
 
 uint32_t defaultProviderDurationMs(OnlineProvider provider) {
@@ -650,6 +666,103 @@ String safeSubreddit(String value) {
   return safe;
 }
 
+int feedMonth(const String& value) {
+  static constexpr const char* kMonths[] = {
+      "jan", "feb", "mar", "apr", "may", "jun",
+      "jul", "aug", "sep", "oct", "nov", "dec"};
+  String lowered = value;
+  lowered.toLowerCase();
+  for (uint8_t index = 0; index < 12; ++index) {
+    if (lowered == kMonths[index]) return index + 1;
+  }
+  return 0;
+}
+
+int32_t feedZoneOffsetSeconds(String value) {
+  value.trim();
+  value.toUpperCase();
+  if (value.isEmpty() || value == "Z" || value == "GMT" ||
+      value == "UTC") {
+    return 0;
+  }
+  const char sign = value[0];
+  if (sign != '+' && sign != '-') return 0;
+  value.remove(0, 1);
+  value.replace(":", "");
+  if (value.length() < 4) return 0;
+  const int hours = value.substring(0, 2).toInt();
+  const int minutes = value.substring(2, 4).toInt();
+  if (hours > 23 || minutes > 59) return 0;
+  const int32_t seconds = hours * 3600L + minutes * 60L;
+  return sign == '-' ? -seconds : seconds;
+}
+
+uint32_t feedEpochWithZone(int year, unsigned month, unsigned day,
+                           unsigned hour, unsigned minute, unsigned second,
+                           int32_t zoneOffsetSeconds) {
+  const uint32_t utc = garminUtcEpoch(year, month, day, hour, minute, second);
+  if (utc == 0) return 0;
+  const int64_t adjusted = static_cast<int64_t>(utc) - zoneOffsetSeconds;
+  return adjusted > 0 && adjusted <= UINT32_MAX
+             ? static_cast<uint32_t>(adjusted)
+             : 0;
+}
+
+uint32_t parseFeedTimestamp(String value) {
+  value = decodeXml(value);
+  value.trim();
+  if (value.length() >= 19 && value[4] == '-' && value[7] == '-' &&
+      (value[10] == 'T' || value[10] == ' ')) {
+    const uint32_t civil = garminIsoUtcEpoch(value.c_str());
+    if (civil == 0) return 0;
+    int zoneAt = value.indexOf('Z', 19);
+    if (zoneAt < 0) zoneAt = value.indexOf('+', 19);
+    if (zoneAt < 0) zoneAt = value.indexOf('-', 19);
+    const int32_t offset =
+        zoneAt < 0 ? 0 : feedZoneOffsetSeconds(value.substring(zoneAt));
+    const int64_t adjusted = static_cast<int64_t>(civil) - offset;
+    return adjusted > 0 && adjusted <= UINT32_MAX
+               ? static_cast<uint32_t>(adjusted)
+               : 0;
+  }
+
+  const int comma = value.indexOf(',');
+  if (comma >= 0) value = value.substring(comma + 1);
+  value.trim();
+  String fields[6];
+  uint8_t count = 0;
+  int start = 0;
+  while (start < static_cast<int>(value.length()) && count < 6) {
+    while (start < static_cast<int>(value.length()) && value[start] == ' ') {
+      ++start;
+    }
+    int end = value.indexOf(' ', start);
+    if (end < 0) end = value.length();
+    if (end > start) fields[count++] = value.substring(start, end);
+    start = end + 1;
+  }
+  if (count >= 5 && !isDigit(fields[0][0])) {
+    for (uint8_t index = 0; index + 1 < count; ++index) {
+      fields[index] = fields[index + 1];
+    }
+    --count;
+  }
+  if (count < 4) return 0;
+  const int firstColon = fields[3].indexOf(':');
+  const int secondColon = fields[3].indexOf(':', firstColon + 1);
+  if (firstColon < 0) return 0;
+  const unsigned hour = fields[3].substring(0, firstColon).toInt();
+  const unsigned minute =
+      fields[3].substring(firstColon + 1,
+                          secondColon < 0 ? fields[3].length() : secondColon)
+          .toInt();
+  const unsigned second =
+      secondColon < 0 ? 0 : fields[3].substring(secondColon + 1).toInt();
+  return feedEpochWithZone(fields[2].toInt(), feedMonth(fields[1]),
+                           fields[0].toInt(), hour, minute, second,
+                           count >= 5 ? feedZoneOffsetSeconds(fields[4]) : 0);
+}
+
 class FeedTitleParser {
  public:
   FeedTitleParser(const String& source, const String& sourceUrl,
@@ -684,6 +797,8 @@ class FeedTitleParser {
     }
     if (capturing_ && title_.length() < maximumChars_ * 4U) {
       title_ += c;
+    } else if (capturingTimestamp_ && timestamp_.length() < 96U) {
+      timestamp_ += c;
     }
   }
 
@@ -721,6 +836,7 @@ class FeedTitleParser {
     headline.title = cleaned;
     headline.id = fnv1a(headline.sourceUrl + cleaned);
     headline.iconId = selectedIconId;
+    headline.publishedAt = parseFeedTimestamp(timestamp_);
   }
 
   void processTag() {
@@ -755,12 +871,15 @@ class FeedTitleParser {
       title_ = "";
       entrySource_ = "";
       entryUrl_ = "";
+      timestamp_ = "";
+      capturingTimestamp_ = false;
       return;
     }
     if (lower == "/item" || lower == "/entry") {
       finishEntry();
       inEntry_ = false;
       capturing_ = false;
+      capturingTimestamp_ = false;
       return;
     }
     if (inEntry_ && dynamicSources_ != nullptr) {
@@ -796,6 +915,18 @@ class FeedTitleParser {
     }
     if (capturing_ && lower == "/title") {
       capturing_ = false;
+      return;
+    }
+    if (inEntry_ && (lower == "pubdate" || lower == "published" ||
+                     lower == "updated" || lower == "date")) {
+      timestamp_ = "";
+      capturingTimestamp_ = true;
+      return;
+    }
+    if (capturingTimestamp_ &&
+        (lower == "/pubdate" || lower == "/published" ||
+         lower == "/updated" || lower == "/date")) {
+      capturingTimestamp_ = false;
     }
   }
 
@@ -813,6 +944,8 @@ class FeedTitleParser {
   String title_;
   String entrySource_;
   String entryUrl_;
+  String timestamp_;
+  bool capturingTimestamp_ = false;
 };
 
 String formEncode(const String& value) {
@@ -1525,6 +1658,7 @@ void DataServices::tick(bool wifiConnected, uint32_t nowMs,
       !config.garminRefreshToken.isEmpty()) {
     enabledForceMask |= kForceActivity;
   }
+  enabledForceMask &= static_cast<uint8_t>(~quarantinedProviderMask_);
   forceRefreshMask_ &= enabledForceMask;
   if (syncActive_ && forceRefreshMask_ == 0) {
     // Settings may disable the remaining providers between serialized jobs.
@@ -1693,14 +1827,26 @@ void DataServices::taskEntry(void* argument) {
     const uint32_t completedAt = millis();
     owner->lastProviderDurationMs_ =
         completedAt - owner->providerStartedAtMs_;
-    const int8_t completedProviderIndex =
-        providerIndex(owner->activeProvider_);
+    const OnlineProvider completedProvider = owner->activeProvider_;
+    const int8_t completedProviderIndex = providerIndex(completedProvider);
     if (completedProviderIndex >= 0) {
       volatile uint32_t& average =
           owner->providerAverageDurationMs_[completedProviderIndex];
       average = average == 0
                     ? owner->lastProviderDurationMs_
                     : (average * 3UL + owner->lastProviderDurationMs_) / 4UL;
+      if (providerOk) {
+        owner->consecutiveProviderFailures_[completedProviderIndex] = 0;
+      } else {
+        uint8_t& failures =
+            owner->consecutiveProviderFailures_[completedProviderIndex];
+        if (failures < UINT8_MAX) ++failures;
+        if (failures >= kProviderFailureQuarantineThreshold) {
+          owner->quarantineProvider(
+              completedProvider,
+              "Paused after three consecutive provider failures");
+        }
+      }
     }
     if (owner->lastProviderDurationMs_ >
         owner->maximumProviderDurationMs_) {
@@ -3978,6 +4124,7 @@ SyncTelemetry DataServices::syncTelemetry() const {
   telemetry.averageSyncDurationMs = averageSyncDurationMs_;
   telemetry.lastProviderDurationMs = lastProviderDurationMs_;
   telemetry.maximumProviderDurationMs = maximumProviderDurationMs_;
+  telemetry.quarantinedProviderMask = quarantinedProviderMask_;
   return telemetry;
 }
 
@@ -4125,6 +4272,54 @@ bool DataServices::requestRefresh() {
   offlineSinceMs_ = 0;
   forceRefreshMask_ = 0xff;
   return true;
+}
+
+void DataServices::quarantineProvider(OnlineProvider provider,
+                                      const char* reason) {
+  const uint8_t bit = providerBit(provider);
+  if (bit == 0) return;
+  const bool alreadyQuarantined = (quarantinedProviderMask_ & bit) != 0;
+  quarantinedProviderMask_ |= bit;
+  forceRefreshMask_ &= static_cast<uint8_t>(~bit);
+
+  const String message = reason == nullptr || reason[0] == '\0'
+                             ? String("Provider paused for this boot")
+                             : String(reason);
+  if (mutex_ != nullptr) xSemaphoreTake(mutex_, portMAX_DELAY);
+  switch (provider) {
+    case OnlineProvider::Rss:
+      data_.rssError = message;
+      break;
+    case OnlineProvider::Netatmo:
+      data_.netatmo.error = message;
+      break;
+    case OnlineProvider::Market:
+      data_.marketError = message;
+      break;
+    case OnlineProvider::Energy:
+      data_.energy.error = message;
+      break;
+    case OnlineProvider::Calendar:
+      data_.calendarError = message;
+      break;
+    case OnlineProvider::Travel:
+      data_.travelError = message;
+      break;
+    case OnlineProvider::Reddit:
+      data_.redditError = message;
+      break;
+    case OnlineProvider::Activity:
+      data_.activityError = message;
+      data_.activity.error = message;
+      break;
+    case OnlineProvider::None:
+      break;
+  }
+  if (mutex_ != nullptr) xSemaphoreGive(mutex_);
+  if (!alreadyQuarantined) {
+    Serial.printf("[data] Quarantined %s for this boot: %s\n",
+                  providerLabel(provider), message.c_str());
+  }
 }
 
 }  // namespace pixelos

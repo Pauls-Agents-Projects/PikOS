@@ -66,9 +66,12 @@ automation server.
   a simple volume slider, and measured low-volume note compensation
 - Browser-based settings with native light/dark appearance, visual animation
   choices, one auditionable named sound library, a main-page notification
-  centre, a full-height horizontal app carousel, per-app storage health, a
+  centre with a chronological all-app feed and app filters, a full-height
+  horizontal app carousel, per-app storage health, a
   compressed 32×8 digital twin, on-screen button remote control,
   browser-rendered motion, realistic pixel borders, and OTA
+- Sync-provider circuit breakers, a persistent four-entry panic journal, and
+  a 128 KiB core-dump partition for post-crash source-level diagnosis
 - Optional LAN notification and pixel-frame ingestion protected by a generated
   API key; experimental remote-display protocols are not exposed in the normal UI
 
@@ -96,13 +99,15 @@ pio run
 ```
 
 The resulting image is `.pio/build/tc001/firmware.bin`. The current RC build
-occupies about three quarters of the 1.875 MiB OTA slot.
+occupies about four fifths of the 1.8125 MiB OTA slot. The partition table also
+reserves 128 KiB for crash dumps without moving or shrinking the settings/icon
+SPIFFS partition.
 
 The packaged release contains:
 
-- `dist/ulanzi-pikos-0.22.0-rc6-full.bin` — bootloader, partition table, and
+- `dist/ulanzi-pikos-0.22.0-rc7-full.bin` — bootloader, partition table, and
   firmware merged for the first serial installation at address `0x0`;
-- `dist/ulanzi-pikos-0.22.0-rc6-ota.bin` — application-only image for PikOS's
+- `dist/ulanzi-pikos-0.22.0-rc7-ota.bin` — application-only image for PikOS's
   browser updater; and
 - `dist/SHA256SUMS` — integrity hashes for both images.
 
@@ -123,7 +128,7 @@ Or install the packaged full image without PlatformIO:
 
 ```sh
 esptool.py --chip esp32 --port /dev/your-port write_flash 0x0 \
-  dist/ulanzi-pikos-0.22.0-rc6-full.bin
+  dist/ulanzi-pikos-0.22.0-rc7-full.bin
 ```
 
 For animation performance testing, PikOS exposes the compact

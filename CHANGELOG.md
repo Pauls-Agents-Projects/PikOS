@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.22.0-rc7 — 2026-10-16
+
+- Merged cached RSS, calendar, Reddit, travel, and activity entries into one
+  chronological Notification Centre feed with per-app filters.
+- Added RSS/Atom publication timestamps and missing square-bracket glyphs.
+- Added per-provider Sync circuit breakers after a panic or three consecutive
+  ordinary failures, keeping unrelated apps operational and identifying the
+  paused source in System health.
+- Added a 128 KiB ELF core-dump partition while preserving SPIFFS in place.
+- Documented the four retained long-uptime Sync panics and safe dump handling.
+
 ## 0.22.0-rc6 — 2026-09-18
 
 First public release candidate of PikOS.

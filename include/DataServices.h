@@ -15,6 +15,7 @@ struct Headline {
   String title;
   uint32_t id = 0;
   uint32_t iconId = 0;
+  uint32_t publishedAt = 0;
 };
 
 struct NetatmoReading {
@@ -233,6 +234,7 @@ struct SyncTelemetry {
   uint32_t averageSyncDurationMs = 0;
   uint32_t lastProviderDurationMs = 0;
   uint32_t maximumProviderDurationMs = 0;
+  uint8_t quarantinedProviderMask = 0;
 };
 
 struct DataCacheTelemetry {
@@ -289,6 +291,10 @@ class DataServices {
   bool consumeEnergyBandEvent();
   bool consumeCalendarAlertEvent(CalendarEvent& event);
   bool requestRefresh();
+  // A provider that panicked on the previous boot, or repeatedly failed on
+  // this boot, is removed from the central queue. Cached data and every other
+  // app stay usable; a deliberate reboot gives the provider one clean retry.
+  void quarantineProvider(OnlineProvider provider, const char* reason);
   bool busy() const { return taskRunning_; }
   bool refreshInProgress() const {
     // A future scheduling deadline is idle time, not active data transfer.
@@ -388,6 +394,8 @@ class DataServices {
   volatile uint32_t averageSyncDurationMs_ = 0;
   volatile uint32_t lastProviderDurationMs_ = 0;
   volatile uint32_t maximumProviderDurationMs_ = 0;
+  volatile uint8_t quarantinedProviderMask_ = 0;
+  uint8_t consecutiveProviderFailures_[8]{};
   // EWMA duration per OnlineProvider (Rss..Activity). Zero means use the
   // conservative built-in estimate until that provider has completed once.
   volatile uint32_t providerAverageDurationMs_[8]{};

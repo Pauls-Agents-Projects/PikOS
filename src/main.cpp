@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <atomic>
+#include <cstring>
 #include <esp_system.h>
 
 #include "AppEngine.h"
@@ -62,6 +63,19 @@ TaskHandle_t displayTaskHandle = nullptr;
 
 bool timeValid() {
   return time(nullptr) > 1672531200;
+}
+
+pixelos::OnlineProvider providerFromBreadcrumb(const char* name) {
+  if (name == nullptr) return pixelos::OnlineProvider::None;
+  for (uint8_t raw = static_cast<uint8_t>(pixelos::OnlineProvider::Rss);
+       raw <= static_cast<uint8_t>(pixelos::OnlineProvider::Activity);
+       ++raw) {
+    const auto provider = static_cast<pixelos::OnlineProvider>(raw);
+    if (strcmp(name, pixelos::crashProviderName(provider)) == 0) {
+      return provider;
+    }
+  }
+  return pixelos::OnlineProvider::None;
 }
 
 CRGB bootLogoColor(char cell, uint8_t frame) {
@@ -384,6 +398,11 @@ void setup() {
   // still fully initialised before any request handler can run.
   webPortal.begin();
   dataServices.begin();
+  if (previous.crashRelated && previous.context == pixelos::CrashContext::Sync) {
+    dataServices.quarantineProvider(
+        providerFromBreadcrumb(previous.provider),
+        "Paused after the previous sync panic");
+  }
   iconStore.begin(config);
   remoteDisplay.begin(config);
   appEngine.begin();

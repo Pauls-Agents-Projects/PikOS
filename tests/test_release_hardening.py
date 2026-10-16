@@ -23,6 +23,9 @@ class ReleaseHardeningTests(unittest.TestCase):
         cls.network = (ROOT / "src" / "NetworkManager.cpp").read_text(
             encoding="utf-8"
         )
+        cls.preview = (ROOT / "tools" / "preview_web_ui.py").read_text(
+            encoding="utf-8"
+        )
 
     def test_notification_centre_owns_cached_content(self) -> None:
         live = self.web.index('data-ui="liveDisplay"')
@@ -30,10 +33,33 @@ class ReleaseHardeningTests(unittest.TestCase):
         apps = self.web.index('data-section="apps"')
         self.assertLess(live, centre)
         self.assertLess(centre, apps)
+        self.assertIn('id="notice-all"', self.web)
+        self.assertIn('id="notification-feed"', self.web)
         for app in ("rss", "calendar", "reddit", "travel", "activity"):
             self.assertIn(f'id="notice-{app}"', self.web)
-            self.assertIn(f'id="{app}-stored-panel"', self.web)
+        self.assertIn("entries.sort((left,right)=>", self.web)
+        self.assertIn("activeNotificationApp===app", self.web)
+        self.assertIn('id="diag-paused"', self.web)
+        self.assertNotIn('id="rss-stored-panel"', self.web)
         self.assertNotIn('class="stored-content', self.web)
+
+    def test_notification_feed_has_provider_timestamps(self) -> None:
+        header = (ROOT / "include" / "DataServices.h").read_text(
+            encoding="utf-8"
+        )
+        providers = (ROOT / "src" / "DataServices.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("uint32_t publishedAt = 0;", header)
+        self.assertIn("parseFeedTimestamp(timestamp_)", providers)
+        for tag in ("pubdate", "published", "updated"):
+            self.assertIn(f'lower == "{tag}"', providers)
+        self.assertIn('item["timestamp"] = headline.publishedAt', self.portal)
+        # The local visual test fixture mirrors the numeric epoch contract and
+        # deliberately interleaves RSS and Reddit publication times.
+        self.assertIn('"timestamp": 1792176300', self.preview)
+        self.assertIn('"timestamp": 1792175100', self.preview)
+        self.assertIn('"starts_at": 1792337400', self.preview)
 
     def test_apps_have_no_nested_vertical_scroller(self) -> None:
         self.assertIn(
@@ -90,6 +116,17 @@ class ReleaseHardeningTests(unittest.TestCase):
         self.assertIn("if (!snapshot.available || !snapshot.crashRelated) return;", self.crash)
         self.assertIn("recentCrashBreadcrumbs", self.crash)
         self.assertIn('createNestedArray("recent_crashes")', self.portal)
+
+    def test_sync_faults_are_contained_and_leave_a_real_core_dump(self) -> None:
+        providers = (ROOT / "src" / "DataServices.cpp").read_text(
+            encoding="utf-8"
+        )
+        main = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+        partitions = (ROOT / "partitions.csv").read_text(encoding="utf-8")
+        self.assertIn("quarantinedProviderMask_", providers)
+        self.assertIn("kProviderFailureQuarantineThreshold = 3", providers)
+        self.assertIn("previous.context == pixelos::CrashContext::Sync", main)
+        self.assertIn("data, coredump", partitions)
 
 
 if __name__ == "__main__":

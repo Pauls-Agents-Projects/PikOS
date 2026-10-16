@@ -14,7 +14,7 @@ class TravelDisplayContractTests(unittest.TestCase):
         web = (ROOT / "include" / "WebUi.h").read_text(encoding="utf-8")
         self.assertIn("kMaximumTravelDepartures = 4", header)
         self.assertIn("kDisplayedTravelDepartures = 2", engine)
-        self.assertIn("entry.departures.slice(0,4)", web)
+        self.assertIn("stop.departures.slice(0,4)", web)
 
     def test_device_shows_route_once_and_second_departure_as_clock_time(self) -> None:
         source = (ROOT / "src" / "AppEngine.cpp").read_text(encoding="utf-8")
@@ -30,12 +30,12 @@ class TravelDisplayContractTests(unittest.TestCase):
 
     def test_browser_does_not_repeat_route_per_departure(self) -> None:
         source = (ROOT / "include" / "WebUi.h").read_text(encoding="utf-8")
-        renderer = source.split("function renderTravelContent", 1)[1].split(
-            "function renderStoredContent", 1
+        renderer = source.split("function notificationEntries", 1)[1].split(
+            "function renderNotificationFeed", 1
         )[0]
-        self.assertIn("routes.join(\"/\")", renderer)
-        self.assertIn("index===0?countdown:time", renderer)
-        self.assertNotIn("departure?.route||entry?.line", renderer)
+        self.assertIn("stop?.line||departures[0]?.route", renderer)
+        self.assertIn('lines.join("  ·  ")', renderer)
+        self.assertNotIn("departure?.route||stop?.line", renderer)
 
 
 if __name__ == "__main__":
