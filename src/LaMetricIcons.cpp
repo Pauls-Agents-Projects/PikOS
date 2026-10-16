@@ -1110,8 +1110,8 @@ bool LaMetricIcons::loadCached(uint32_t iconId) {
                      sizeof(sourceFrame), crc);
       const uint8_t destination = sourceIndex;
       if (delays[destination] == 0) {
-        memcpy(icon.frames[destination].pixels, sourceFrame.pixels,
-               sizeof(sourceFrame.pixels));
+        ::memcpy(icon.frames[destination].pixels, sourceFrame.pixels,
+                 sizeof(sourceFrame.pixels));
       }
       delays[destination] += max<uint16_t>(sourceFrame.delayMs, 40);
     }
@@ -1310,7 +1310,7 @@ bool LaMetricIcons::copyFrame(uint32_t iconId, CRGB output[64],
     }
     phase -= delay;
   }
-  memcpy(output, frame->pixels, sizeof(frame->pixels));
+  ::memcpy(output, frame->pixels, sizeof(frame->pixels));
   if (mutex_ != nullptr) xSemaphoreGive(mutex_);
   return true;
 }
@@ -1332,7 +1332,7 @@ bool LaMetricIcons::copyFrameByIndex(uint32_t iconId, uint8_t frameIndex,
     frameCount = static_cast<uint8_t>(icon.frames.size());
     if (frameIndex < frameCount) {
       const IconFrame& frame = icon.frames[frameIndex];
-      memcpy(output, frame.pixels, sizeof(frame.pixels));
+      ::memcpy(output, frame.pixels, sizeof(frame.pixels));
       delayMs = frame.delayMs;
       copied = true;
     }

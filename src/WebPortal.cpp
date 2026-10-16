@@ -1181,7 +1181,7 @@ void WebPortal::handleDisplay() {
       length = offset;
     }
 
-    memcpy(twinBaseline_, logical, sizeof(logical));
+    ::memcpy(twinBaseline_, logical, sizeof(logical));
     twinBaselineSequence_ = sequence;
     twinBaselineValid_ = true;
     server_.sendHeader("Cache-Control", "no-store");
