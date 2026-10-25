@@ -13,6 +13,7 @@
 #include "PixelDisplay.h"
 #include "PixelFont.h"
 #include "RemoteDisplay.h"
+#include "TlsHeapGuard.h"
 #include "Version.h"
 #include "WebPortal.h"
 
@@ -380,6 +381,11 @@ void setup() {
   runtimeConfigRevision = configStore.revision();
   const pixelos::AppConfig& config = runtimeConfig;
 
+  // Reserve the private mbedTLS arena before FastLED's buffered RMT backend
+  // allocates its 256-pixel pulse train. Both are long-lived blocks; fixing
+  // their order prevents startup fragmentation from disabling TLS or the
+  // cached browser document.
+  pixelos::beginTlsHeapGuard();
   display.begin();
   display.setOrientation(config.orientation180);
   display.setBrightness(config.manualBrightness);

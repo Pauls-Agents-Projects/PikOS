@@ -11,6 +11,8 @@ namespace pixelos {
 
 class PixelDisplay;
 
+constexpr uint32_t kStandbyClockIconId = 8268;
+
 // Downloads selected 8x8 LaMetric gallery icons, stores a compact binary copy
 // in SPIFFS, and renders animated frames without blocking the display loop.
 class LaMetricIcons {

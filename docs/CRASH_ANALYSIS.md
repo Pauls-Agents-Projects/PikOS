@@ -38,3 +38,27 @@ Never commit or attach a complete NVS, full-flash, or raw core dump: task
 stacks can contain fragments of Wi-Fi or provider credentials. Decode the core
 dump locally against the matching `firmware.elf`, then share only the redacted
 backtrace and crash summary.
+
+## Core dump collected on 2026-10-25
+
+The first dump from the new partition matched firmware commit `c94b916` and
+contained twelve tasks. The faulting TCP/IP task stopped at
+`udp_sendto+31` with a DNS UDP control-block pointer of `0x1`. At the same
+instant, PikOS's `online-data` worker was inside `WiFiClientSecure::connect`,
+resolving Yahoo for `DataServices::fetchMarket()`.
+
+The failure was below the market parser: Arduino-ESP32 2.x `hostByName()` calls
+lwIP's raw `dns_gethostbyname()` from the caller's task, while lwIP's DNS retry
+timer owns the same resolver state on the TCP/IP task. PikOS made that race
+repeatable by deliberately running every provider on its own core-0 worker.
+The previously varied RSS, Travel and Market breadcrumbs are consistent with
+this shared DNS boundary rather than three independent app crashes.
+
+PikOS now resolves every outbound TLS hostname through `getaddrinfo()`. Its
+thread-safe netconn path serializes resolver work onto lwIP's TCP/IP task. The
+resulting IP address is passed to mbedTLS together with the original hostname,
+so certificate validation and SNI are unchanged. Both provider and LaMetric
+icon clients use this path.
+
+Only the redacted stacks and addresses above were retained. The raw dump was
+kept outside the repository for local decoding and removed after verification.

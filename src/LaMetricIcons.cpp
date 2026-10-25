@@ -1,10 +1,10 @@
 #include "LaMetricIcons.h"
 
+#include "SafeTlsClient.h"
 #include "TlsTrust.h"
 
 #include <HTTPClient.h>
 #include <SPIFFS.h>
-#include <WiFiClientSecure.h>
 #include <esp32/rom/miniz.h>
 
 #include "PixelDisplay.h"
@@ -189,6 +189,11 @@ std::vector<WantedIcon> wantedIcons(const AppConfig& config) {
       if (item.iconId != 0) wanted.push_back({item.iconId, ""});
     }
   };
+
+  // StandBy is part of the OS rather than an app card. Cache its gallery
+  // artwork with the other system assets so sleeping never starts a network
+  // request and a first-frame fallback remains available while offline.
+  addId(kStandbyClockIconId);
 
   // Queue only artwork that an enabled app can actually render. The merged
   // Climate app deliberately uses the shared climate IDs for both its local
@@ -722,7 +727,7 @@ bool LaMetricIcons::download(uint32_t iconId) {
   // the foreground Sync app for minutes.
   constexpr uint8_t kAttempts = 1;
   for (uint8_t attempt = 0; attempt < kAttempts; ++attempt) {
-    WiFiClientSecure client;
+    SafeTlsClient client;
     configureTrustedTlsClient(client);
     HTTPClient http;
     http.setConnectTimeout(6000);
@@ -923,7 +928,7 @@ bool LaMetricIcons::downloadPngIcon(uint32_t iconId, const String& url,
   String payload;
   int lastStatus = 0;
   for (uint8_t attempt = 0; attempt < max<uint8_t>(attempts, 1); ++attempt) {
-    WiFiClientSecure client;
+    SafeTlsClient client;
     configureTrustedTlsClient(client);
     HTTPClient http;
     http.setConnectTimeout(6000);

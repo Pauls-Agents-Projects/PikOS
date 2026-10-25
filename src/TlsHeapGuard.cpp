@@ -70,6 +70,7 @@ void beginTlsHeapGuard() {
   if (leaseMutex == nullptr) {
     leaseMutex = xSemaphoreCreateRecursiveMutexStatic(&leaseMutexStorage);
   }
+  if (tlsHeap != nullptr) return;
   if (tlsArena == nullptr) {
     constexpr size_t candidates[] = {
         kPreferredTlsArenaBytes, 56U * 1024U, 52U * 1024U,

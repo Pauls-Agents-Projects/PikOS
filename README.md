@@ -105,9 +105,9 @@ SPIFFS partition.
 
 The packaged release contains:
 
-- `dist/ulanzi-pikos-0.22.0-rc7-full.bin` — bootloader, partition table, and
+- `dist/ulanzi-pikos-0.22.0-rc8-full.bin` — bootloader, partition table, and
   firmware merged for the first serial installation at address `0x0`;
-- `dist/ulanzi-pikos-0.22.0-rc7-ota.bin` — application-only image for PikOS's
+- `dist/ulanzi-pikos-0.22.0-rc8-ota.bin` — application-only image for PikOS's
   browser updater; and
 - `dist/SHA256SUMS` — integrity hashes for both images.
 
@@ -128,7 +128,7 @@ Or install the packaged full image without PlatformIO:
 
 ```sh
 esptool.py --chip esp32 --port /dev/your-port write_flash 0x0 \
-  dist/ulanzi-pikos-0.22.0-rc7-full.bin
+  dist/ulanzi-pikos-0.22.0-rc8-full.bin
 ```
 
 For animation performance testing, PikOS exposes the compact
@@ -264,6 +264,9 @@ For Netatmo setup, see [docs/NETATMO.md](docs/NETATMO.md). Market setup is in
 experimental Tallinn departures contract and future routing choices are in
 [docs/travel-app.md](docs/travel-app.md).
 The optional LAN API is documented in [docs/API.md](docs/API.md).
+The [app catalog direction](docs/app-catalog.md) explains why downloadable
+native modules are a poor fit for this ESP32 and outlines a safer declarative
+GitHub catalog for a later release.
 
 ## Security and current hardware status
 
@@ -278,7 +281,7 @@ The optional LAN API is documented in [docs/API.md](docs/API.md).
   trusted network or isolated IoT VLAN. Physical flash access can still reveal
   NVS credentials because stock TC001 hardware does not provide PikOS with
   secure boot or flash encryption.
-- Release checks include 52 automated contracts, an ESP32 build, secret scan,
+- Release checks include 59 automated contracts, an ESP32 build, secret scan,
   browser interaction/overflow checks, and hardware FPS/button/sync monitors.
 - PikOS has been flashed and exercised on the target TC001. Each release
   image is still a test build until its display behavior and online services

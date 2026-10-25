@@ -26,6 +26,9 @@ class ReleaseHardeningTests(unittest.TestCase):
         cls.preview = (ROOT / "tools" / "preview_web_ui.py").read_text(
             encoding="utf-8"
         )
+        cls.safe_tls = (ROOT / "src" / "SafeTlsClient.cpp").read_text(
+            encoding="utf-8"
+        )
 
     def test_notification_centre_owns_cached_content(self) -> None:
         live = self.web.index('data-ui="liveDisplay"')
@@ -42,6 +45,18 @@ class ReleaseHardeningTests(unittest.TestCase):
         self.assertIn('id="diag-paused"', self.web)
         self.assertNotIn('id="rss-stored-panel"', self.web)
         self.assertNotIn('class="stored-content', self.web)
+
+    def test_notification_centre_is_a_chronological_timeline(self) -> None:
+        self.assertIn(".notification-feed:before", self.web)
+        self.assertIn('className="notification-time"', self.web)
+        self.assertIn("copy.append(when,title,meta)", self.web)
+        self.assertIn("entries.sort((left,right)=>", self.web)
+
+    def test_header_uses_accessible_wifi_reception_bars(self) -> None:
+        self.assertIn('id="connection-bars"', self.web)
+        self.assertIn("function paintConnectionState", self.web)
+        self.assertIn("signal-${level}", self.web)
+        self.assertNotIn("`● ${uiText[lang].connected}`", self.web)
 
     def test_notification_feed_has_provider_timestamps(self) -> None:
         header = (ROOT / "include" / "DataServices.h").read_text(
@@ -127,6 +142,45 @@ class ReleaseHardeningTests(unittest.TestCase):
         self.assertIn("kProviderFailureQuarantineThreshold = 3", providers)
         self.assertIn("previous.context == pixelos::CrashContext::Sync", main)
         self.assertIn("data, coredump", partitions)
+
+    def test_outbound_dns_is_marshaled_through_thread_safe_netconn(self) -> None:
+        providers = (ROOT / "src" / "DataServices.cpp").read_text(
+            encoding="utf-8"
+        )
+        icons = (ROOT / "src" / "LaMetricIcons.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("getaddrinfo(host", self.safe_tls)
+        self.assertNotIn("WiFi.hostByName", self.safe_tls)
+        self.assertIn("address, port, host", self.safe_tls)
+        self.assertIn("SafeTlsClient providerSecureClient", providers)
+        self.assertIn("SafeTlsClient client", icons)
+
+    def test_physical_led_transport_uses_all_hardware_rmt_memory(self) -> None:
+        platformio = (ROOT / "platformio.ini").read_text(encoding="utf-8")
+        main = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+        self.assertIn("FASTLED_RMT_MEM_BLOCKS=8", platformio)
+        self.assertIn("FASTLED_ESP32_FLASH_LOCK=1", platformio)
+        self.assertNotIn("FASTLED_RMT_BUILTIN_DRIVER=1", platformio)
+        self.assertLess(
+            main.index("pixelos::beginTlsHeapGuard();"),
+            main.index("display.begin();"),
+        )
+
+    def test_sleep_clock_uses_lametric_8268_with_offline_fallback(self) -> None:
+        icons = (ROOT / "src" / "LaMetricIcons.cpp").read_text(
+            encoding="utf-8"
+        )
+        engine = (ROOT / "src" / "AppEngine.cpp").read_text(
+            encoding="utf-8"
+        )
+        header = (ROOT / "include" / "LaMetricIcons.h").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("kStandbyClockIconId = 8268", header)
+        self.assertIn("addId(kStandbyClockIconId)", icons)
+        self.assertIn("iconStore_.draw(kStandbyClockIconId", engine)
+        self.assertIn("TinyIcon::Clock", engine)
 
 
 if __name__ == "__main__":

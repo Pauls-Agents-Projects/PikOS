@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.22.0-rc8 — 2026-10-25
+
+- Decoded the first on-device core dump and fixed the shared provider crash:
+  outbound TLS clients now use lwIP's thread-safe resolver instead of racing
+  the TCP/IP DNS retry timer from the online worker.
+- Gave the single WS2812 panel all eight hardware RMT memory blocks, cutting
+  refill interrupts by 4×, and serialized flash writes around each LED
+  transfer to prevent random one-frame colours during Wi-Fi/cache activity.
+- Added animated LaMetric icon 8268 to the low-light StandBy clock, with an
+  offline built-in fallback.
+- Restyled the Notification Centre as one chronological visual timeline and
+  replaced the connected-status dot with accessible signal-strength bars.
+- Documented a safe declarative GitHub app-catalog direction; arbitrary native
+  plug-ins remain intentionally out of the release candidate.
+
 ## 0.22.0-rc7 — 2026-10-16
 
 - Merged cached RSS, calendar, Reddit, travel, and activity entries into one

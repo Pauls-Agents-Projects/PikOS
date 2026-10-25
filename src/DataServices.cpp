@@ -1,6 +1,7 @@
 #include "DataServices.h"
 
 #include "GarminTokenParser.h"
+#include "SafeTlsClient.h"
 #include "TallinnSiriParser.h"
 #include "TlsHeapGuard.h"
 #include "TlsTrust.h"
@@ -8,7 +9,6 @@
 
 #include <HTTPClient.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 #include <esp_task_wdt.h>
 
 #include <algorithm>
@@ -49,9 +49,9 @@ constexpr size_t kMaximumGarminRefreshTokenBytes = 3072;
 // general heap. The online worker is strictly serial and web request parsing
 // is suspended during each provider, so one reusable context is sufficient.
 // Large mbedTLS allocations continue to use the separately guarded arena.
-WiFiClientSecure providerSecureClient;
+SafeTlsClient providerSecureClient;
 
-WiFiClientSecure& resetProviderSecureClient() {
+SafeTlsClient& resetProviderSecureClient() {
   providerSecureClient.stop();
   configureTrustedTlsClient(providerSecureClient);
   // WiFiClientSecure otherwise permits a TLS handshake to sit for 120
@@ -1279,7 +1279,7 @@ bool fetchKrakenCryptoPair(const String& displaySymbol, MarketQuote& quote,
   String payload;
   int status = 0;
   for (uint8_t attempt = 0; attempt < 3; ++attempt) {
-    WiFiClientSecure& client = resetProviderSecureClient();
+    SafeTlsClient& client = resetProviderSecureClient();
     HTTPClient http;
     http.setConnectTimeout(kHttpTimeoutMs);
     http.setTimeout(kHttpTimeoutMs);
@@ -1454,7 +1454,7 @@ bool fetchFrankfurterPair(const String& displaySymbol, MarketQuote& quote,
   String payload;
   int status = 0;
   for (uint8_t attempt = 0; attempt < 3; ++attempt) {
-    WiFiClientSecure& client = resetProviderSecureClient();
+    SafeTlsClient& client = resetProviderSecureClient();
     HTTPClient http;
     http.setConnectTimeout(kHttpTimeoutMs);
     http.setTimeout(kHttpTimeoutMs);
@@ -2170,7 +2170,7 @@ bool DataServices::refreshGarminToken(AppConfig& config, String& error,
       "grant_type=refresh_token&client_id=" +
       formEncode(config.garminClientId) + "&refresh_token=" +
       formEncode(config.garminRefreshToken);
-  WiFiClientSecure& client = resetProviderSecureClient();
+  SafeTlsClient& client = resetProviderSecureClient();
   HTTPClient http;
   http.setConnectTimeout(kHttpTimeoutMs);
   http.setTimeout(kHttpTimeoutMs);
@@ -2285,7 +2285,7 @@ bool DataServices::fetchGarminJson(
   }
 
   for (uint8_t attempt = 0; attempt < 2; ++attempt) {
-    WiFiClientSecure& client = resetProviderSecureClient();
+    SafeTlsClient& client = resetProviderSecureClient();
     HTTPClient http;
     http.setConnectTimeout(kHttpTimeoutMs);
     http.setTimeout(kHttpTimeoutMs);
@@ -2568,7 +2568,7 @@ bool DataServices::fetchRssUrl(const String& url, const String& source,
       return false;
     }
     WiFiClient plainClient;
-    WiFiClientSecure& secureClient = resetProviderSecureClient();
+    SafeTlsClient& secureClient = resetProviderSecureClient();
     WiFiClient* client = &plainClient;
     if (requestUrl.startsWith("https://")) {
       // The full embedded public CA bundle authenticates user-configurable
@@ -2663,7 +2663,7 @@ bool DataServices::refreshNetatmoToken(AppConfig& config, String& error) {
       "&client_secret=" + formEncode(config.netatmoClientSecret);
   String payload;
   for (uint8_t attempt = 0; attempt < 3; ++attempt) {
-    WiFiClientSecure& client = resetProviderSecureClient();
+    SafeTlsClient& client = resetProviderSecureClient();
     HTTPClient http;
     http.setConnectTimeout(kHttpTimeoutMs);
     http.setTimeout(kHttpTimeoutMs);
@@ -2732,7 +2732,7 @@ bool DataServices::fetchNetatmo(AppConfig& config,
 
   bool refreshedAfterAuthorizationError = false;
   for (uint8_t attempt = 0; attempt < 2; ++attempt) {
-    WiFiClientSecure& client = resetProviderSecureClient();
+    SafeTlsClient& client = resetProviderSecureClient();
     HTTPClient http;
     http.setConnectTimeout(kHttpTimeoutMs);
     http.setTimeout(kHttpTimeoutMs);
@@ -3025,7 +3025,7 @@ bool DataServices::fetchMarket(const AppConfig& config,
       String yahooFailure = "Yahoo request failed";
       std::unique_ptr<DynamicJsonDocument> yahooDocument;
       for (uint8_t attempt = 0; attempt < 3 && !yahooParsed; ++attempt) {
-        WiFiClientSecure& client = resetProviderSecureClient();
+        SafeTlsClient& client = resetProviderSecureClient();
         HTTPClient http;
         http.setConnectTimeout(kHttpTimeoutMs);
         http.setTimeout(kHttpTimeoutMs);
@@ -3160,7 +3160,7 @@ bool DataServices::fetchMarket(const AppConfig& config,
     joined += symbol;
   }
 
-  WiFiClientSecure& client = resetProviderSecureClient();
+  SafeTlsClient& client = resetProviderSecureClient();
   HTTPClient http;
   http.setConnectTimeout(kHttpTimeoutMs);
   http.setTimeout(kHttpTimeoutMs);
@@ -3313,7 +3313,7 @@ bool DataServices::fetchCalendarUrl(
     const AppConfig& config,
     std::vector<CalendarEvent>& events, String& error) {
   WiFiClient plainClient;
-  WiFiClientSecure& secureClient = resetProviderSecureClient();
+  SafeTlsClient& secureClient = resetProviderSecureClient();
   WiFiClient* client = &plainClient;
   if (url.startsWith("https://")) {
     client = &secureClient;
@@ -3500,7 +3500,7 @@ bool DataServices::fetchTravel(
       "https://transport.tallinn.ee/siri-stop-departures.php?stopid=" +
       stopIds + "&time=" + String(requestEpoch) + "000";
 
-  WiFiClientSecure& client = resetProviderSecureClient();
+  SafeTlsClient& client = resetProviderSecureClient();
   HTTPClient http;
   http.setConnectTimeout(kHttpTimeoutMs);
   http.setTimeout(kHttpTimeoutMs);
@@ -3761,7 +3761,7 @@ bool DataServices::fetchEnergy(const AppConfig& config,
   String payload;
   int status = 0;
   for (uint8_t attempt = 0; attempt < 2; ++attempt) {
-    WiFiClientSecure& client = resetProviderSecureClient();
+    SafeTlsClient& client = resetProviderSecureClient();
     HTTPClient http;
     http.setConnectTimeout(kHttpTimeoutMs);
     http.setTimeout(kHttpTimeoutMs);

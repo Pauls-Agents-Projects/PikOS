@@ -2469,9 +2469,14 @@ void AppEngine::renderStandbyClock(uint32_t nowMs,
     text = formattedClockTime(local, config.clock24Hour);
   }
   display_.clear();
-  const int16_t x =
-      (hardware::kMatrixWidth - measureClockText(text)) / 2;
-  display_.drawClockText(max<int16_t>(0, x), 0, text, CRGB::White);
+  if (!iconStore_.draw(kStandbyClockIconId, display_, 0, 0, nowMs)) {
+    display_.drawIcon(TinyIcon::Clock, 1, 0, CRGB(88, 110, 150), nowMs);
+  }
+  constexpr int16_t kTextStart = 9;
+  constexpr int16_t kTextWidth = hardware::kMatrixWidth - kTextStart;
+  const int16_t x = kTextStart +
+                    max<int16_t>(0, (kTextWidth - measureClockText(text)) / 2);
+  display_.drawClockText(x, 0, text, CRGB::White);
   display_.show();
 }
 
